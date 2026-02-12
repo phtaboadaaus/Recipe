@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Mi Recetario</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icons/icon-192.png">
+    <link rel="stylesheet" href="styles.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+    // Asegurar compatibilidad total
+    window.jsPDF = window.jspdf?.jsPDF || window.jspdf?.default;
+</script>
+
+</head>
+<body>
+    <div id="app" class="app">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <button id="toggleSidebar" class="icon-btn" style="font-size:1.6rem;">☰</button>
+
+                <h1 data-i18n="app_title">Mi Recetario</h1>
+            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-btn active" data-view="recipesView" data-i18n="nav_recipes">Recetas</button>
+                <button class="nav-btn" data-view="searchView" data-i18n="nav_search">Buscar</button>
+                <button class="nav-btn" data-view="shoppingView" data-i18n="nav_shopping">Lista de compra</button>
+                <button class="nav-btn" data-view="backupView" data-i18n="nav_backup">Backup / Importar</button>
+                <button class="nav-btn" data-view="settingsView" data-i18n="nav_settings">Ajustes</button>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <!-- RECETAS -->
+            <section id="recipesView" class="view active">
+                <header class="view-header">
+                    <h2 data-i18n="recipes_title">Recetas</h2>
+                    <button id="btnNewRecipe" class="primary" data-i18n="btn_new_recipe">Nueva receta</button>
+                </header>
+
+                <div class="toolbar">
+                    <div class="toolbar-group">
+                        <label for="categoryFilter" data-i18n="label_filter_category">Categoría:</label>
+                        <select id="categoryFilter"></select>
+                    </div>
+                    <div class="toolbar-group">
+                        <label for="sortRecipes" data-i18n="label_sort_by">Ordenar por:</label>
+                        <select id="sortRecipes">
+                            <option value="name" data-i18n="sort_name">Nombre</option>
+                            <option value="difficulty" data-i18n="sort_difficulty">Dificultad</option>
+                            <option value="time" data-i18n="sort_time">Tiempo</option>
+                            <option value="ingredientsCount" data-i18n="sort_ingredients_count">Nº ingredientes</option>
+                        </select>
+                </div>
+                    <label><input type="checkbox" id="filterFavorites"><span data-i18n="fav">Solo favoritos</span></label>
+                </div>
+
+                <div id="recipesList" class="cards-list"></div>
+            </section>
+
+            <!-- BUSCAR -->
+            <section id="searchView" class="view">
+                <header class="view-header">
+                    <h2 data-i18n="search_title">Buscar / Sugerencias</h2>
+                </header>
+
+                <div class="search-section">
+                    <h3 data-i18n="search_general_title">Búsqueda general</h3>
+                    <div class="form-row">
+                        <label for="searchText" data-i18n="search_text_label">Texto (nombre, etiquetas, ingredientes):</label>
+                        <input type="text" id="searchText" data-i18n-placeholder="buscaingre">
+                    </div>
+                    <button id="btnSearchText" class="primary" data-i18n="btn_search">Buscar</button>
+                </div>
+
+                <div class="search-section">
+                    <h3 data-i18n="search_ingredients_title">Buscar por ingredientes disponibles</h3>
+                    <div class="form-row">
+                        <label for="searchIngredients" data-i18n="search_ingredients_label">Ingredientes (separados por coma):</label>
+                        <input type="text" id="searchIngredients" data-i18n-placeholder="buscagene">
+                    </div>
+                    <div class="form-row">
+                        <label data-i18n="search_mode_label">Modo:</label>
+                        <select id="searchMode">
+                            <option value="all" data-i18n="search_mode_all">Debe contener todos</option>
+                            <option value="any" data-i18n="search_mode_any">Debe contener al menos uno</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="searchSort" data-i18n="label_sort_by">Ordenar por:</label>
+                        <select id="searchSort">
+                            <option value="relevance" data-i18n="sort_relevance">Relevancia</option>
+                            <option value="difficulty" data-i18n="sort_difficulty">Dificultad</option>
+                            <option value="time" data-i18n="sort_time">Tiempo</option>
+                            <option value="ingredientsCount" data-i18n="sort_ingredients_count">Nº ingredientes</option>
+                        </select>
+                    </div>
+                    <button id="btnSearchIngredients" class="primary" data-i18n="btn_search">Buscar</button>
+                </div>
+
+                <div id="searchResults" class="cards-list"></div>
+            </section>
+
+            <!-- LISTA COMPRA -->
+            <section id="shoppingView" class="view">
+                <header class="view-header">
+                    <h2 data-i18n="shopping_title">Lista de compra</h2>
+                </header>
+
+                <div class="shopping-controls">
+                    <button id="btnClearShopping" class="danger" data-i18n="btn_clear_shopping">Vaciar lista</button>
+                </div>
+
+                <ul id="shoppingList" class="shopping-list"></ul>
+            </section>
+
+            <!-- BACKUP -->
+            <section id="backupView" class="view">
+                <header class="view-header">
+                    <h2 data-i18n="backup_title">Backup / Importar / Exportar</h2>
+                </header>
+
+                <div class="backup-section">
+                    <h3 data-i18n="backup_export_all_title">Exportar recetario completo</h3>
+                    <button id="btnExportAllJson" class="primary" data-i18n="btn_export_all_json">Exportar JSON</button>
+                    <button id="btnExportAllPdf" class="secondary" data-i18n="btn_export_all_pdf">Exportar PDF</button>
+                </div>
+
+                <div class="backup-section">
+                    <h3 data-i18n="backup_import_all_title">Importar recetario completo</h3>
+                    <label for="backupFile" class="file-btn" data-i18n="select_backup">Seleccionar archivo</label>
+<input type="file" id="backupFile" style="display:none">
+
+                    <button id="btnImportAllJson" class="primary" data-i18n="btn_import_all_json">Importar JSON</button>
+                </div>
+
+                <div class="backup-section">
+                    <h3 data-i18n="backup_import_single_title">Importar receta individual</h3>
+                    <label for="backupFile" class="file-btn" data-i18n="select_backup">Seleccionar archivo</label>
+<input type="file" id="backupFile" style="display:none">
+
+                    <button id="btnImportRecipeJson" class="primary" data-i18n="btn_import_recipe_json">Importar receta</button>
+                </div>
+            </section>
+
+            <!-- AJUSTES -->
+            <section id="settingsView" class="view">
+                <header class="view-header">
+                    <h2 data-i18n="settings_title">Ajustes</h2>
+                </header>
+
+                <div class="settings-section">
+                    <h3 data-i18n="settings_language_title">Idioma</h3>
+                    <div class="form-row">
+                        <label for="languageSelect" data-i18n="settings_language_label">Idioma de la interfaz:</label>
+                        <select id="languageSelect">
+                            <option value="es">Español</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3 data-i18n="settings_theme_title">Tema</h3>
+                    <div class="form-row">
+                        <label for="themeSelect" data-i18n="settings_theme_label">Tema:</label>
+                        <select id="themeSelect">
+                            <option value="light" data-i18n="theme_light">Claro</option>
+                            <option value="dark" data-i18n="theme_dark">Oscuro</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL RECETA -->
+    <div id="recipeModal" class="modal hidden">
+        <div class="modal-content">
+            <header class="modal-header">
+                <h2 id="recipeModalTitle" data-i18n="modal_new_recipe">Nueva receta</h2>
+                <button id="btnCloseModal" class="icon-btn">&times;</button>
+            </header>
+            <div class="modal-body">
+                <form id="recipeForm">
+                    <input type="hidden" id="recipeId">
+
+                    <div class="form-row">
+                        <label for="recipeName" data-i18n="recipe_name_label">Nombre:</label>
+                        <input type="text" id="recipeName" required>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="recipeCategory" data-i18n="recipe_category_label">Categoría:</label>
+                        <select id="recipeCategory"></select>
+                        <input type="text" id="newCategoryName" data-i18n-placeholder="btn_add_category">
+                        <button type="button" id="btnAddCategory" class="secondary" data-i18n="btn_add_category">Añadir categoría</button>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="recipeServings" data-i18n="recipe_servings_label">Porciones base:</label>
+                        <input type="number" id="recipeServings" min="1" value="4" required>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="recipeTime" data-i18n="recipe_time_label">Tiempo (minutos):</label>
+                        <input type="number" id="recipeTime" min="0">
+                    </div>
+
+                    <div class="form-row">
+                        <label for="recipeDifficulty" data-i18n="recipe_difficulty_label">Dificultad:</label>
+                        <select id="recipeDifficulty">
+                            <option value="easy" data-i18n="difficulty_easy">Fácil</option>
+                            <option value="medium" data-i18n="difficulty_medium">Media</option>
+                            <option value="hard" data-i18n="difficulty_hard">Difícil</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="recipeTags" data-i18n="recipe_tags_label">Etiquetas (coma):</label>
+                        <input type="text" id="recipeTags" data-i18n-placeholder="etiqueta">
+                    </div>
+
+                    <div class="form-row">
+                        <label for="recipeImage" data-i18n="recipe_image_label">Foto:</label>
+                        <label for="recipeImage" class="file-btn" data-i18n="select_file">Seleccionar archivo</label>
+                        <input type="file" id="recipeImage" style="display:none">
+
+                    </div>
+
+                    <div class="form-row">
+                        <label data-i18n="recipe_ingredients_label">Ingredientes:</label>
+                        <textarea id="recipeIngredients" rows="4" data-i18n-placeholder="ingredientes"></textarea>
+                        <small data-i18n="recipe_ingredients_help">Un ingrediente por línea o separado por punto y coma.</small>
+                    </div>
+
+                    <div class="form-row">
+                        <label data-i18n="recipe_steps_label">Pasos:</label>
+                        <textarea id="recipeSteps" rows="5" data-i18n-placeholder="pasos"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <label data-i18n="recipe_notes_label">Notas:</label>
+                        <textarea id="recipeNotes" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="recipeRecalcServings" data-i18n="recipe_recalc_label">Recalcular porciones:</label>
+                        <input type="number" id="recipeRecalcServings" min="1" value="4">
+                        <small data-i18n="recipe_recalc_help">Solo visual, no se guarda.</small>
+                    </div>
+
+                    <footer class="modal-footer">
+                        <button type="submit" class="primary" data-i18n="btn_save_recipe">Guardar</button>
+                        <button type="button" id="btnDeleteRecipe" class="danger" data-i18n="btn_delete_recipe">Eliminar</button>
+                    </footer>
+                </form>
+            </div>
+        </div>
+    </div>
+
+<div id="viewRecipeModal" class="modal hidden">
+    <div class="modal-content">
+        <header class="modal-header">
+            <h2 id="viewRecipeTitle"></h2>
+            <button id="btnCloseViewRecipe" class="icon-btn">&times;</button>
+        </header>
+
+        <div class="modal-body" id="viewRecipeBody"></div>
+    </div>
+</div>
+
+
+    <div id="savedModal" class="modal hidden">
+    <div class="modal-content small">
+        <header class="modal-header">
+            <h2>✔ Receta guardada</h2>
+            <button id="btnCloseSaved" class="icon-btn">&times;</button>
+        </header>
+        <div class="modal-body">
+            <p>La receta se guardó correctamente.</p>
+        </div>
+    </div>
+</div>
+
+
+    <script src="app.js"></script>
+
+</body>
+</html>
